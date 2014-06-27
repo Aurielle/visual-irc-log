@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Statistics for channel {$log->channel} from {$log->date|date:"Y-m-d"}</title>
+
+		<!-- Bootstrap -->
+		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+
+		<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+		<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+		<!--[if lt IE 9]>
+		  <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+		  <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+
+		<style>
+		pre {
+			max-height: 600px;
+		}
+
+		.chart {
+			margin: 0 auto;
+			height: 300px;
+		}
+
+		.chart.pie {
+			height: 400px;
+		}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>{$log->channel} statistics <small>from {$log->date|date:"d.m.Y"}</small></h1>
+			<hr>
+			<p class="lead">
+				On this day, there was a total of <strong>{$log->totalMessages|number} messages</strong> containing
+				<strong>{count($log->words)|number} words</strong> and <strong>{$log->totalLength|number} characters</strong>.
+				Messages contained <strong>{$log->averageWords|number:2} words</strong> on average and people were most
+				active <strong>{$maxHour|timeOfDay}</strong> at {$maxHour} o' clock.
+			</p>
+			<hr>
+
+			<h3>Activity breakdown by hours</h3>
+			<div id="hours" class="chart"></div>
+			<hr>
+
+			<h3>Actions breakdown<h3>
+			<div id="actions" class="chart pie"></div>
+			<hr>
+
+			<h3>Most active users</h3>
+			<div id="users" class="chart pie"></div>
+			<hr>
+
+			<h3>Most used words</h3>
+            <div id="words" class="chart pie"></div>
+            <hr>
+
+            <h3>25 most used words</h3>
+            <table class="table">
+                <tr>
+                    <th>#</th>
+                    <th>word</th>
+                    <th>occurances</th>
+                </tr>
+                <tr n:foreach="$template->arsort($log->words, 25) as $word => $occur">
+                    <td>{$iterator->counter}</td>
+                    <td>{$word}</td>
+                    <td>{$occur}</td>
+                </tr>
+            </table>
+            <hr>
+
+            <h3>25 most posted URLs</h3>
+            <table class="table">
+                <tr>
+                    <th>#</th>
+                    <th>URL</th>
+                    <th>occurances</th>
+                </tr>
+                <tr n:foreach="$template->arsort($log->urls, 25) as $url => $occur">
+                    <td>{$iterator->counter}</td>
+                    <td><a href="{$url}">{$url}</a></td>
+                    <td>{$occur}</td>
+                </tr>
+            </table>
+            <hr>
+
+			<h3>Full log</h3>
+			<pre>{$log->rawLog}</pre>
+		</div>
+
+		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<!-- Include all compiled plugins (below), or include individual files as needed -->
+		<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+		<script src="//code.highcharts.com/highcharts.js"></script>
+		<script>
+		$(function () {
+			$('#hours').highcharts({
+				chart: {
+					type: 'column'
+				},
+				title: null,
+				xAxis: {
+					categories: {array_keys($log->times)}
+				},
+				yAxis: {
+					title: {
+						text: null
+					}
+				},
+				legend: false,
+				credits: false,
+				tooltip: {
+					headerFormat: '<span style="font-size:11px">{l}point.key} o\' clock</span><br>',
+					pointFormat: '<b>{l}point.y} actions</b>',
+					shared: true,
+					useHTML: true
+				},
+				plotOptions: {
+					column: {
+						pointPadding: 0.2,
+						borderWidth: 0
+					}
+				},
+				series: [{
+					data: {array_values($log->times)},
+					name: 'Number of actions'
+				}]
+			});
+
+			$('#actions').highcharts({
+				chart: {
+					plotBackgroundColor: null,
+					plotBorderWidth: null,
+					plotShadow: true
+				},
+				title: false,
+				credits: false,
+				plotOptions: {
+					pie: {
+						cursor: 'pointer',
+						dataLabels: {
+							enabled: true,
+							format: '<b>{l}point.name}</b>: {l}point.percentage:.1f} %',
+							style: {
+								color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+							}
+						}
+					}
+				},
+				series: [{
+					type: 'pie',
+					name: 'Number of actions',
+					data: {$log->stats|forPieChart:true}
+				}]
+			});
+
+			$('#users').highcharts({
+				chart: {
+					plotBackgroundColor: null,
+					plotBorderWidth: null,
+					plotShadow: true
+				},
+				title: false,
+				credits: false,
+				plotOptions: {
+					pie: {
+						cursor: 'pointer',
+						dataLabels: {
+							enabled: true,
+							format: '<b>{l}point.name}</b>: {l}point.percentage:.1f} %',
+							style: {
+								color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+							}
+						}
+					}
+				},
+				series: [{
+					type: 'pie',
+					name: 'Number of actions',
+					data: {$log->users|arsort:10|forPieChart}
+				}]
+			});
+
+			$('#words').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: true
+                },
+                title: false,
+                credits: false,
+                plotOptions: {
+                    pie: {
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            format: '<b>{l}point.name}</b>: {l}point.percentage:.1f} %',
+                            style: {
+                                color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                            }
+                        }
+                    }
+                },
+                series: [{
+                    type: 'pie',
+                    name: 'Number of actions',
+                    data: {$log->words|arsort:10|forPieChart}
+                }]
+            });
+		});
+		</script>
+	</body>
+</html>
